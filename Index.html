@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracker GLP-1 & Peptídeos Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c12; --surface: #0e1520; --surface2: #141d2e; --surface3: #1a2540;
+    --border: #1f2d45; --border2: #243350; --accent: #00e5ff; --accent2: #7c3aed;
+    --accent3: #10b981; --accent4: #f59e0b; --accent5: #ef4444;
+    --text: #e2eaf5; --text2: #8fa3bf; --text3: #4a6080;
+    --font-head: 'Syne', sans-serif; --font-body: 'Space Grotesk', sans-serif;
+    --radius: 14px; --radius-sm: 8px; --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 60% 40% at 80% 20%, rgba(0,229,255,0.04) 0%, transparent 60%), radial-gradient(ellipse 50% 60% at 10% 80%, rgba(124,58,237,0.04) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+  #app { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: rgba(14,21,32,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text { font-family: var(--font-head); font-weight: 700; font-size: 15px; }
+  .logo-text span { color: var(--accent); }
+  .header-actions { display: flex; gap: 8px; }
+  nav { display: flex; overflow-x: auto; gap: 4px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
+  .nav-btn { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .nav-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+  main { flex: 1; padding: 20px 16px 80px; max-width: 800px; margin: 0 auto; width: 100%; }
+  .section { display: none; animation: fadeIn 0.3s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .card-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--accent), transparent); }
+  .stat-card.purple::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .stat-card.yellow::before { background: linear-gradient(90deg, var(--accent4), transparent); }
+  .stat-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .stat-value { font-family: var(--font-head); font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat-value.blue { color: var(--accent); } .stat-value.purple { color: var(--accent2); } .stat-value.green { color: var(--accent3); } .stat-value.yellow { color: var(--accent4); }
+  .stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { flex: 1 1 100%; }
+  label { font-size: 12px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  input[type=text], input[type=number], input[type=date], input[type=datetime-local], input[type=time], select, textarea { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--text); font-family: var(--font-body); font-size: 14px; width: 100%; transition: border-color 0.2s; -webkit-appearance: none; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.08); }
+  textarea { min-height: 80px; resize: vertical; }
+  select option { background: var(--surface2); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: var(--radius-sm); border: none; font-family: var(--font-body); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-secondary { background: var(--surface3); color: var(--text); border: 1px solid var(--border2); }
+  .btn-success { background: var(--accent3); color: #000; }
+  .btn-full { width: 100%; } .btn-sm { padding: 7px 12px; font-size: 12px; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+  .history-item { display: flex; align-items: center; gap: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; }
+  .history-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .history-item .dot.blue { background: var(--accent); } .history-item .dot.green { background: var(--accent3); } .history-item .dot.purple { background: var(--accent2); }
+  .history-item .info { flex: 1; }
+  .history-item .info .main { font-weight: 500; color: var(--text); }
+  .history-item .info .sub { color: var(--text3); font-size: 11px; margin-top: 2px; }
+  .history-item .del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 16px; padding: 4px; }
+  .rotation-badge { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(124,58,237,0.08)); border: 1px solid rgba(0,229,255,0.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
+  .rotation-badge .text .title { color: var(--accent); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .rotation-badge .text .next { color: var(--text); font-weight: 500; margin-top: 2px; font-size: 13px; }
+  .site-btn { padding: 12px; border-radius: var(--radius-sm); border: 2px solid var(--border2); background: var(--surface2); color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .site-btn.selected { border-color: var(--accent); background: rgba(0,229,255,0.1); color: var(--accent); font-weight: 600; }
+  .site-btn.used { border-color: var(--accent5); background: rgba(239,68,68,0.07); color: var(--accent5); }
+  .checklist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .check-item { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+  .check-item input[type=checkbox] { display: none; }
+  .check-box { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; transition: all 0.2s; }
+  .check-item.checked { border-color: var(--accent4); background: rgba(245,158,11,0.08); }
+  .check-item.checked .check-box { background: var(--accent4); border-color: var(--accent4); color: #000; }
+  .habit-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .habit-row:last-child { border-bottom: none; }
+  .habit-label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .toggle-btn { width: 52px; height: 28px; border-radius: 14px; background: var(--surface3); border: none; cursor: pointer; position: relative; transition: background 0.2s; }
+  .toggle-btn.on { background: var(--accent3); }
+  .toggle-btn::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 4px; left: 4px; transition: left 0.2s; }
+  .toggle-btn.on::after { left: 28px; }
+  .water-glasses { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .glass { width: 36px; height: 44px; border-radius: 4px 4px 6px 6px; border: 2px solid var(--border2); cursor: pointer; display: flex; align-items: flex-end; overflow: hidden; }
+  .glass.filled { border-color: var(--accent); }
+  .glass-fill { width: 100%; background: linear-gradient(0deg, var(--accent), rgba(0,229,255,0.3)); transition: height 0.3s; height: 0; }
+  .glass.filled .glass-fill { height: 100%; }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .photo-item { border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); position: relative; aspect-ratio: 3/4; background: var(--surface2); }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-item .photo-date { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 8px 6px 6px; font-size: 10px; color: rgba(255,255,255,0.8); font-weight: 500; }
+  .photo-item .del-photo { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); border: none; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+  .photo-item:hover .del-photo { display: flex; }
+  .compound-list { display: flex; flex-direction: column; gap: 8px; }
+  .compound-item { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .compound-pill { background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.3); color: #a78bfa; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+  .alert { display: flex; align-items: flex-start; gap: 10px; border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; margin-bottom: 12px; }
+  .alert-warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+  .chart-wrap { position: relative; height: 200px; margin-top: 8px; }
+  .reminder-list { display: flex; flex-direction: column; gap: 8px; }
+  .reminder-item { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .reminder-time { font-family: var(--font-head); font-size: 20px; font-weight: 700; color: var(--accent); min-width: 60px; }
+  .reminder-info { flex: 1; }
+  .reminder-info .main { font-size: 13px; font-weight: 500; }
+  .reminder-info .sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab { flex: 1; padding: 9px; text-align: center; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .tab.active { background: var(--surface3); border-color: var(--accent); color: var(--accent); }
+  .empty { text-align: center; padding: 32px 16px; color: var(--text3); }
+  .empty .emoji { font-size: 36px; margin-bottom: 8px; }
+  .empty p { font-size: 13px; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--surface3); border: 1px solid var(--border2); border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 300; opacity: 0; transition: all 0.3s; white-space: nowrap; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-family: var(--font-head); font-size: 22px; font-weight: 800; }
+  .section-title span { color: var(--accent); }
+  .progress-bar { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .file-drop { border: 2px dashed var(--border2); border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; color: var(--text3); font-size: 13px; display: block; }
+  .file-drop .emoji { font-size: 28px; margin-bottom: 6px; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">💉</div>
+      <div class="logo-text">GLP-1 <span>&</span> Peptídeos Pro</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary btn-sm" onclick="checkReminders()">🔔</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportData()">📤</button>
+    </div>
+  </header>
+  <nav>
+    <button class="nav-btn active" onclick="goTo('dashboard',this)">📊 Dashboard</button>
+    <button class="nav-btn" onclick="goTo('aplicacoes',this)">💉 Aplicações</button>
+    <button class="nav-btn" onclick="goTo('peso',this)">⚖️ Peso</button>
+    <button class="nav-btn" onclick="goTo('medidas',this)">📏 Medidas</button>
+    <button class="nav-btn" onclick="goTo('peptideos',this)">🧪 Peptídeos</button>
+    <button class="nav-btn" onclick="goTo('colaterais',this)">⚠️ Colaterais</button>
+    <button class="nav-btn" onclick="goTo('habitos',this)">🌿 Hábitos</button>
+    <button class="nav-btn" onclick="goTo('fotos',this)">📷 Fotos</button>
+    <button class="nav-btn" onclick="goTo('lembretes',this)">🔔 Lembretes</button>
+  </nav>
+  <main>
+    <section id="dashboard" class="section active">
+      <div class="section-header">
+        <div class="section-title">Dashboard <span>Pro</span></div>
+        <span style="font-size:12px;color:var(--text3)" id="dash-date"></span>
+      </div>
+      <div id="dash-alert"></div>
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-label">Peso Atual</div><div class="stat-value blue" id="dash-peso">—</div><div class="stat-sub" id="dash-peso-diff"></div></div>
+        <div class="stat-card green"><div class="stat-label">Última Aplicação</div><div class="stat-value green" id="dash-last-app" style="font-size:16px">—</div><div class="stat-sub" id="dash-last-app-sub"></div></div>
+        <div class="stat-card purple"><div class="stat-label">Próximo Local</div><div class="stat-value purple" id="dash-next-site" style="font-size:14px">—</div><div class="stat-sub">Rotação sugerida</div></div>
+        <div class="stat-card yellow"><div class="stat-label">Água Hoje</div><div class="stat-value yellow" id="dash-agua">0</div><div class="stat-sub">copos (meta: 8)</div></div>
+      </div>
+      <div class="card"><div class="card-title"><span>📉</span> Evolução do Peso</div><div class="chart-wrap"><canvas id="dashChart"></canvas></div></div>
+      <div class="card"><div class="card-title"><span>📋</span> Resumo do Dia</div>
+        <div class="habit-row"><div class="habit-label"><span>🏋️</span> Treinou hoje?</div><span id="dash-treino" style="font-size:13px;color:var(--text3)">—</span></div>
+        <div class="habit-row"><div class="habit-label"><span>👟</span> Passos</div><span id="dash-passos" style="font-size:13px;color:var(--text3)">—</span></div>
+        <div class="habit-row"><div class="habit-label"><span>⚖️</span> Média semanal</div><span id="dash-media" style="font-size:13px;color:var(--accent)">—</span></div>
+      </div>
+    </section>
+    <section id="aplicacoes" class="section">
+      <div class="section-header"><div class="section-title">💉 <span>Aplicações</span></div></div>
+      <div class="rotation-badge"><span style="font-size:24px">🔄</span><div class="text"><div class="title">Próximo local sugerido</div><div class="next" id="rotation-text">Calculando...</div></div></div>
+      <div class="card"><div class="card-title"><span>➕</span> Nova Aplicação</div>
+        <div class="form-row">
+          <div class="form-group"><label>Data & Hora</label><input type="datetime-local" id="app-datetime"></div>
+          <div class="form-group"><label>Substância</label><select id="app-substance"><option>Tirzepatida</option><option>Semaglutida</option><option>CJC-1295</option><option>Ipamorelin</option><option>BPC-157</option><option>TB-500</option><option>HGH</option><option value="Outro">Outro</option></select></div>
+        </div>
+        <div id="custom-substance-wrap" style="display:none" class="form-row"><div class="form-group full"><label>Nome personalizado</label><input type="text" id="custom-substance" placeholder="Nome da substância..."></div></div>
+        <div class="form-row">
+          <div class="form-group"><label>Dose (mg)</label><input type="number" id="app-dose" placeholder="Ex: 2.5" step="0.01" min="0"></div>
+          <div class="form-group"><label>Concentração (mg/ml)</label><input type="number" id="app-conc" placeholder="Ex: 5" step="0.01" min="0"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label>Local de Aplicação</label>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px">
+            <button class="site-btn" onclick="selectSite('Ombro Direito',this)" data-site="Ombro Direito">💪 Ombro Direito</button>
+            <button class="site-btn" onclick="selectSite('Ombro Esquerdo',this)" data-site="Ombro Esquerdo">💪 Ombro Esquerdo</button>
+            <button class="site-btn" onclick="selectSite('Vasto Direito',this)" data-site="Vasto Direito">🦵 Vasto Direito</button>
+            <button class="site-btn" onclick="selectSite('Vasto Esquerdo',this)" data-site="Vasto Esquerdo">🦵 Vasto Esquerdo</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label>Observações</label><textarea id="app-obs" placeholder="Alguma observação..."></textarea></div>
+        <button class="btn btn-primary btn-full" onclick="saveAplicacao()">✅ Registrar Aplicação</button>
+      </div>
+      <div class="card"><div class="card-title"><span>📋</span> Histórico</div><div class="history-list" id="app-history"></div></div>
+    </section>
+    <section id="peso" class="section">
+      <div class="section-header"><div class="section-title">⚖️ <span>Peso</span></div></div>
+      <div class="card"><div class="card-title"><span>➕</span> Registrar Peso</div>
+        <div class="form-row">
+          <div class="form-group"><label>Data</label><input type="date" id="peso-data"></div>
+          <div class="form-group"><label>Peso (kg)</label><input type="number" id="peso-valor" placeholder="Ex: 85.5" step="0.1"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label>Observações</label><input type="text" id="peso-obs" placeholder="Em jejum, após treino..."></div>
+        <button class="btn btn-primary btn-full" onclick="savePeso()">✅ Registrar Peso</button>
+      </div>
+      <div class="card"><div class="card-title"><span>📉</span> Gráfico</div><div class="chart-wrap"><canvas id="pesoChart"></canvas></div></div>
+      <div class="card"><div class="card-title"><span>📊</span> Estatísticas</div>
+        <div class="stats-grid" style="margin-bottom:0">
+          <div class="stat-card blue"><div class="stat-label">Menor</div><div class="stat-value blue" id="peso-min" style="font-size:22px">—</div></div>
+          <div class="stat-card yellow"><div class="stat-label">Maior</div><div class="stat-value yellow" id="peso-max" style="font-size:22px">—</div></div>
+          <div class="stat-card green"><div class="stat-label">Média Semanal</div><div class="stat-value green" id="peso-media-sem" style="font-size:22px">—</div></div>
+          <div class="stat-card purple"><div class="stat-label">Total Perdido</div><div class="stat-value purple" id="peso-total-loss" style="font-size:22px">—</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title"><span>📋</span> Histórico</div><div class="history-list" id="peso-history"></div></div>
+    </section>
+    <section id="medidas" class="section">
+      <div class="section-header"><div class="section-title">📏 <span>Medidas</span></div></div>
+      <div class="card"><div class="card-title"><span>➕</span> Registrar Medidas</div>
+        <div class="form-row"><div class="form-group"><label>Data</label><input type="date" id="med-data"></div></div>
+        <div class="form-row">
+          <div class="form-group"><label>Cintura (cm)</label><input type="number" id="med-cintura" placeholder="0" step="0.1"></div>
+          <div class="form-group"><label>Abdômen (cm)</label><input type="number" id="med-abdomen" placeholder="0" step="0.1"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Peito (cm)</label><input type="number" id="med-peito" placeholder="0" step="0.1"></div>
+          <div class="form-group"><label>Braço (cm)</label><input type="number" id="med-braco" placeholder="0" step="0.1"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Coxa (cm)</label><input type="number" id="med-coxa" placeholder="0" step="0.1"></div>
+          <div class="form-group"><label>Quadril (cm)</label><input type="number" id="med-quadril" placeholder="0" step="0.1"></div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveMedidas()">✅ Registrar Medidas</button>
+      </div>
+      <div class="card"><div class="card-title"><span>📊</span> Gráfico — <small id="med-chart-label" style="color:var(--text3);font-size:13px">Cintura</small></div>
+        <div class="tab-bar"><button class="tab active" onclick="setMedChart('cintura',this)">Cintura</button><button class="tab" onclick="setMedChart('abdomen',this)">Abdômen</button><button class="tab" onclick="setMedChart('peito',this)">Peito</button><button class="tab" onclick="setMedChart('braco',this)">Braço</button><button class="tab" onclick="setMedChart('coxa',this)">Coxa</button></div>
+        <div class="chart-wrap"><canvas id="medidasChart"></canvas></div>
+      </div>
+      <div class="card"><div class="card-title"><span>📋</span> Histórico</div><div class="history-list" id="med-history"></div></div>
+    </section>
+    <section id="peptideos" class="section">
+      <div class="section-header"><div class="section-title">🧪 <span>Peptídeos</span></div></div>
+      <div class="card"><div class="card-title"><span>➕</span> Adicionar Composto</div>
+        <div class="form-row">
+          <div class="form-group"><label>Composto</label><select id="pep-name-sel" onchange="pepNameChange()"><option>Tirzepatida</option><option>Semaglutida</option><option>CJC-1295</option><option>Ipamorelin</option><option>BPC-157</option><option>TB-500</option><option>HGH</option><option>GHRP-6</option><option>Selank</option><option value="Personalizado">Personalizado...</option></select></div>
+          <div class="form-group" id="pep-custom-wrap" style="display:none"><label>Nome</label><input type="text" id="pep-custom-name" placeholder="Nome do composto"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Dose (mg)</label><input type="number" id="pep-dose" placeholder="Ex: 0.5" step="0.01"></div>
+          <div class="form-group"><label>Frequência</label><select id="pep-freq"><option>Diário</option><option>2x ao dia</option><option>Semanal</option><option>2x na semana</option><option>3x na semana</option><option>5x na semana</option><option>Conforme necessário</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Início</label><input type="date" id="pep-inicio"></div>
+          <div class="form-group"><label>Vial (mg)</label><input type="number" id="pep-vial" placeholder="Ex: 5" step="0.1"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px"><label>Observações</label><textarea id="pep-obs" placeholder="Objetivos, notas..."></textarea></div>
+        <button class="btn btn-primary btn-full" onclick="savePeptideo()">✅ Adicionar ao Protocolo</button>
+      </div>
+      <div class="card"><div class="card-title"><span>🧬</span> Protocolo Atual</div><div class="compound-list" id="pep-list"><div class="empty"><div class="emoji">🧪</div><p>Nenhum composto adicionado</p></div></div></div>
+    </section>
+    <section id="colaterais" class="section">
+      <div class="section-header"><div class="section-title">⚠️ <span>Colaterais</span></div></div>
+      <div class="card"><div class="card-title"><span>📅</span> Registrar Colaterais</div>
+        <div class="form-row">
+          <div class="form-group"><label>Data</label><input type="date" id="col-data"></div>
+          <div class="form-group"><label>Intensidade</label><select id="col-intensidade"><option>Leve</option><option>Moderada</option><option>Intensa</option></select></div>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Sintomas</label>
+        <div class="checklist">
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Náusea"><div class="check-box">✓</div><span>🤢 Náusea</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Cansaço"><div class="check-box">✓</div><span>😴 Cansaço</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Dor local"><div class="check-box">✓</div><span>😣 Dor local</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Falta de apetite"><div class="check-box">✓</div><span>🍽️ Sem apetite</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Constipação"><div class="check-box">✓</div><span>🚽 Constipação</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Diarreia"><div class="check-box">✓</div><span>💧 Diarreia</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Dor de cabeça"><div class="check-box">✓</div><span>🤕 Dor de cabeça</span></label>
+          <label class="check-item" onclick="toggleCheck(this)"><input type="checkbox" value="Refluxo"><div class="check-box">✓</div><span>🔥 Refluxo</span></label>
+        </div>
+        <div class="form-group" style="margin-top:14px;margin-bottom:14px"><label>Observações</label><textarea id="col-obs" placeholder="Descreva os sintomas..."></textarea></div>
+        <button class="btn btn-primary btn-full" onclick="saveColateral()">✅ Registrar</button>
+      </div>
+      <div class="card"><div class="card-title"><span>📋</span> Histórico</div><div class="history-list" id="col-history"></div></div>
+    </section>
+    <section id="habitos" class="section">
+      <div class="section-header"><div class="section-title">🌿 <span>Hábitos</span></div><span id="hab-date" style="font-size:12px;color:var(--text3)"></span></div>
+      <div class="card"><div class="card-title"><span>💧</span> Água</div>
+        <p style="font-size:13px;color:var(--text3);margin-bottom:10px">Meta: 8 copos = 2L</p>
+        <div class="water-glasses" id="water-glasses"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <span style="font-size:14px;color:var(--text2)"><span id="water-count" style="font-size:20px;font-weight:700;color:var(--accent)">0</span> / 8</span>
+          <div class="progress-bar" style="flex:1;margin:0 12px"><div class="progress-fill" id="water-progress" style="width:0%"></div></div>
+          <button class="btn btn-secondary btn-sm" onclick="resetWater()">Resetar</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title"><span>🏋️</span> Treino</div>
+        <div class="habit-row"><div class="habit-label"><span>💪</span> Treinou hoje?</div><button class="toggle-btn" id="treino-toggle" onclick="toggleTreino()"></button></div>
+        <div id="treino-extra" style="display:none;margin-top:10px">
+          <div class="form-row">
+            <div class="form-group"><label>Tipo</label><select id="treino-tipo"><option>Musculação</option><option>Cardio</option><option>HIIT</option><option>Funcional</option><option>Caminhada</option><option>Corrida</option><option>Natação</option><option>Outro</option></select></div>
+            <div class="form-group"><label>Duração (min)</label><input type="number" id="treino-duracao" placeholder="60" min="1"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title"><span>👟</span> Passos</div>
+        <div class="form-row">
+          <div class="form-group"><label>Passos hoje</label><input type="number" id="passos-valor" placeholder="Ex: 8000" min="0"></div>
+          <div class="form-group" style="justify-content:flex-end;flex-direction:column"><button class="btn btn-primary" onclick="savePassos()" style="margin-top:22px">Salvar</button></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="passos-bar" style="width:0%;background:linear-gradient(90deg,var(--accent3),var(--accent))"></div></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px">Meta: 10.000 passos</div>
+      </div>
+      <div class="card"><div class="card-title"><span>📊</span> Salvar Dia</div><button class="btn btn-success btn-full" onclick="saveHabitos()">✅ Salvar Registro de Hoje</button></div>
+      <div class="card"><div class="card-title"><span>📋</span> Histórico</div><div class="history-list" id="hab-history"></div></div>
+    </section>
+    <section id="fotos" class="section">
+      <div class="section-header"><div class="section-title">📷 <span>Progresso</span></div></div>
+      <div class="card"><div class="card-title"><span>➕</span> Adicionar Foto</div>
+        <div class="form-row">
+          <div class="form-group"><label>Data</label><input type="date" id="foto-data"></div>
+          <div class="form-group"><label>Legenda</label><input type="text" id="foto-legenda" placeholder="Ex: Semana 4 frente"></div>
+        </div>
+        <label for="foto-upload" class="file-drop"><div class="emoji">📸</div><div>Toque para selecionar foto</div></label>
+        <input type="file" id="foto-upload" accept="image/*" onchange="uploadFoto(event)">
+      </div>
+      <div class="card"><div class="card-title"><span>🗓️</span> Linha do Tempo</div><div id="foto-timeline"><div class="empty"><div class="emoji">📷</div><p>Nenhuma foto ainda</p></div></div></div>
+    </section>
+    <section id="lembretes" class="section">
+      <div class="section-header"><div class="section-title">🔔 <span>Lembretes</span></div></div>
+      <div class="card"><div class="card-title"><span>➕</span> Novo Lembrete</div>
+        <div class="form-row">
+          <div class="form-group"><label>Título</label><input type="text" id="lem-titulo" placeholder="Ex: Aplicação semanal"></div>
+          <div class="form-group"><label>Horário</label><input type="time" id="lem-hora"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Dia(s)</label><select id="lem-dia"><option>Todos os dias</option><option>Segunda-feira</option><option>Terça-feira</option><option>Quarta-feira</option><option>Quinta-feira</option><option>Sexta-feira</option><option>Sábado</option><option>Domingo</option></select></div>
+          <div class="form-group"><label>Tipo</label><select id="lem-tipo"><option>💉 Aplicação</option><option>⚖️ Peso</option><option>💧 Água</option><option>🏋️ Treino</option><option>🧪 Peptídeo</option><option>📏 Medidas</option></select></div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveLembrete()">✅ Criar Lembrete</button>
+      </div>
+      <div class="card"><div class="card-title"><span>📋</span> Meus Lembretes</div><div class="reminder-list" id="lem-list"><div class="empty"><div class="emoji">🔔</div><p>Nenhum lembrete</p></div></div></div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const DB={get:k=>{try{return JSON.parse(localStorage.getItem(k))||[];}catch{return[];}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v)),getObj:k=>{try{return JSON.parse(localStorage.getItem(k))||{};}catch{return{};}},setObj:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+function today(){return new Date().toISOString().split('T')[0];}
+function nowDT(){const d=new Date();return d.toISOString().slice(0,16);}
+function fmtDate(s){if(!s)return'—';const d=new Date(s+(s.length===10?'T12:00:00':''));return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});}
+function fmtDT(s){if(!s)return'—';const d=new Date(s);return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function goTo(id,btn){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');if(id==='dashboard')renderDashboard();if(id==='aplicacoes')renderAplicacoes();if(id==='peso')renderPeso();if(id==='medidas')renderMedidas();if(id==='peptideos')renderPeptideos();if(id==='colaterais')renderColaterais();if(id==='habitos')renderHabitos();if(id==='fotos')renderFotos();if(id==='lembretes')renderLembretes();}
+const charts={};
+function createOrUpdateChart(id,labels,data,color='#00e5ff',label=''){const ctx=document.getElementById(id).getContext('2d');if(charts[id]){charts[id].destroy();}charts[id]=new Chart(ctx,{type:'line',data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'18',borderWidth:2,pointRadius:4,pointBackgroundColor:color,tension:0.35,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#4a6080',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#4a6080',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}});}
+function calcMediaSemanal(p){if(!p.length)return'—';const w=p.slice(-7);return(w.reduce((s,x)=>s+x.valor,0)/w.length).toFixed(1);}
+function renderDashboard(){document.getElementById('dash-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});const pesos=DB.get('pesos');if(pesos.length){const last=pesos[pesos.length-1];document.getElementById('dash-peso').textContent=last.valor+' kg';if(pesos.length>1){const diff=(last.valor-pesos[pesos.length-2].valor).toFixed(1);document.getElementById('dash-peso-diff').textContent=(diff>0?'+':'')+diff+' kg vs anterior';}createOrUpdateChart('dashChart',pesos.slice(-14).map(p=>fmtDate(p.data)),pesos.slice(-14).map(p=>p.valor));document.getElementById('dash-media').textContent=calcMediaSemanal(pesos);}const apps=DB.get('aplicacoes');if(apps.length){const l=apps[apps.length-1];document.getElementById('dash-last-app').textContent=l.substance;document.getElementById('dash-last-app-sub').textContent=l.dose+'mg · '+fmtDT(l.datetime);}document.getElementById('dash-next-site').textContent=getNextSite();document.getElementById('dash-agua').textContent=DB.getObj('water-'+today()).count||0;const hab=DB.getObj('habitos-'+today());document.getElementById('dash-treino').textContent=hab.treinou?'✅ Sim':'—';document.getElementById('dash-passos').textContent=hab.passos?hab.passos+' passos':'—';const alertEl=document.getElementById('dash-alert');if(apps.length){const days=Math.floor((Date.now()-new Date(apps[apps.length-1].datetime))/86400000);if(days>=7)alertEl.innerHTML='<div class="alert alert-warn">⚠️ Última aplicação há <strong>'+days+' dias</strong>. Verifique seu protocolo!</div>';else alertEl.innerHTML='';}}
+let selectedSite='';
+document.getElementById('app-datetime').value=nowDT();
+document.getElementById('app-substance').addEventListener('change',function(){document.getElementById('custom-substance-wrap').style.display=this.value==='Outro'?'flex':'none';});
+function selectSite(s,btn){selectedSite=s;document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');}
+const SITES=['Ombro Direito','Ombro Esquerdo','Vasto Direito','Vasto Esquerdo'];
+function getNextSite(){const a=DB.get('aplicacoes');if(!a.length)return SITES[0];return SITES[(SITES.indexOf(a[a.length-1].site)+1)%SITES.length];}
+function renderAplicacoes(){const next=getNextSite();document.getElementById('rotation-text').textContent=next;const apps=DB.get('aplicacoes');const last3=apps.slice(-3).map(a=>a.site);document.querySelectorAll('.site-btn').forEach(btn=>{btn.classList.remove('selected','used');if(last3.includes(btn.dataset.site))btn.classList.add('used');if(btn.dataset.site===next)btn.classList.add('selected');});selectedSite=next;const list=document.getElementById('app-history');if(!apps.length){list.innerHTML='<div class="empty"><div class="emoji">💉</div><p>Nenhuma aplicação</p></div>';return;}list.innerHTML=[...apps].reverse().map(a=>`<div class="history-item"><div class="dot blue"></div><div class="info"><div class="main">${a.substance} · ${a.dose}mg</div><div class="sub">${fmtDT(a.datetime)} · ${a.site}${a.obs?' · '+a.obs:''}</div></div><button class="del" onclick="delItem('aplicacoes','${a.id}',renderAplicacoes)">🗑</button></div>`).join('');}
+function saveAplicacao(){const substance=document.getElementById('app-substance').value==='Outro'?document.getElementById('custom-substance').value:document.getElementById('app-substance').value;const dose=parseFloat(document.getElementById('app-dose').value);const datetime=document.getElementById('app-datetime').value;const obs=document.getElementById('app-obs').value;if(!substance||!dose||!datetime||!selectedSite){showToast('⚠️ Preencha todos os campos');return;}DB.set('aplicacoes',[...DB.get('aplicacoes'),{id:uid(),substance,dose,datetime,site:selectedSite,obs}]);document.getElementById('app-dose').value='';document.getElementById('app-obs').value='';document.getElementById('app-datetime').value=nowDT();showToast('💉 Aplicação registrada!');renderAplicacoes();}
+document.getElementById('peso-data').value=today();
+function savePeso(){const data=document.getElementById('peso-data').value;const valor=parseFloat(document.getElementById('peso-valor').value);if(!data||!valor){showToast('⚠️ Preencha data e peso');return;}const arr=[...DB.get('pesos'),{id:uid(),data,valor,obs:document.getElementById('peso-obs').value}];arr.sort((a,b)=>a.data.localeCompare(b.data));DB.set('pesos',arr);document.getElementById('peso-valor').value='';showToast('⚖️ Peso registrado!');renderPeso();}
+function renderPeso(){const p=DB.get('pesos');const list=document.getElementById('peso-history');if(!p.length){list.innerHTML='<div class="empty"><div class="emoji">⚖️</div><p>Nenhum peso</p></div>';['peso-min','peso-max','peso-media-sem','peso-total-loss'].forEach(id=>document.getElementById(id).textContent='—');return;}createOrUpdateChart('pesoChart',p.map(x=>fmtDate(x.data)),p.map(x=>x.valor));document.getElementById('peso-min').textContent=Math.min(...p.map(x=>x.valor))+' kg';document.getElementById('peso-max').textContent=Math.max(...p.map(x=>x.valor))+' kg';document.getElementById('peso-media-sem').textContent=calcMediaSemanal(p)+' kg';const loss=(p[0].valor-p[p.length-1].valor).toFixed(1);document.getElementById('peso-total-loss').textContent=(loss>=0?'-':'+')+Math.abs(loss)+' kg';list.innerHTML=[...p].reverse().map(x=>`<div class="history-item"><div class="dot blue"></div><div class="info"><div class="main">${x.valor} kg</div><div class="sub">${fmtDate(x.data)}${x.obs?' · '+x.obs:''}</div></div><button class="del" onclick="delItem('pesos','${x.id}',renderPeso)">🗑</button></div>`).join('');}
+document.getElementById('med-data').value=today();
+let currentMedChart='cintura';
+function saveMedidas(){const data=document.getElementById('med-data').value;if(!data){showToast('⚠️ Informe a data');return;}const rec={id:uid(),data};['cintura','abdomen','peito','braco','coxa','quadril'].forEach(f=>{rec[f]=parseFloat(document.getElementById('med-'+f).value)||null;document.getElementById('med-'+f).value='';});const arr=[...DB.get('medidas'),rec];arr.sort((a,b)=>a.data.localeCompare(b.data));DB.set('medidas',arr);showToast('📏 Medidas registradas!');renderMedidas();}
+function setMedChart(f,tab){currentMedChart=f;document.querySelectorAll('.tab-bar .tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');document.getElementById('med-chart-label').textContent=f.charAt(0).toUpperCase()+f.slice(1);renderMedChart();}
+function renderMedChart(){const m=DB.get('medidas');createOrUpdateChart('medidasChart',m.filter(x=>x[currentMedChart]!==null).map(x=>fmtDate(x.data)),m.map(x=>x[currentMedChart]).filter(v=>v!==null),'#7c3aed');}
+function renderMedidas(){renderMedChart();const m=DB.get('medidas');const list=document.getElementById('med-history');if(!m.length){list.innerHTML='<div class="empty"><div class="emoji">📏</div><p>Nenhuma medida</p></div>';return;}list.innerHTML=[...m].reverse().map(x=>{const parts=['cintura','abdomen','peito','braco','coxa','quadril'].filter(f=>x[f]).map(f=>f.charAt(0).toUpperCase()+f.slice(1)+': '+x[f]+'cm').join(' · ');return`<div class="history-item"><div class="dot purple"></div><div class="info"><div class="main">${fmtDate(x.data)}</div><div class="sub">${parts}</div></div><button class="del" onclick="delItem('medidas','${x.id}',renderMedidas)">🗑</button></div>`;}).join('');}
+document.getElementById('pep-inicio').value=today();
+function pepNameChange(){document.getElementById('pep-custom-wrap').style.display=document.getElementById('pep-name-sel').value==='Personalizado'?'flex':'none';}
+function savePeptideo(){let name=document.getElementById('pep-name-sel').value;if(name==='Personalizado')name=document.getElementById('pep-custom-name').value;const dose=document.getElementById('pep-dose').value;if(!name||!dose){showToast('⚠️ Informe o composto e a dose');return;}DB.set('peptideos',[...DB.get('peptideos'),{id:uid(),name,dose,freq:document.getElementById('pep-freq').value,inicio:document.getElementById('pep-inicio').value,vial:document.getElementById('pep-vial').value,obs:document.getElementById('pep-obs').value}]);document.getElementById('pep-dose').value='';document.getElementById('pep-obs').value='';showToast('🧪 Composto adicionado!');renderPeptideos();}
+function renderPeptideos(){const arr=DB.get('peptideos');const list=document.getElementById('pep-list');if(!arr.length){list.innerHTML='<div class="empty"><div class="emoji">🧪</div><p>Nenhum composto</p></div>';return;}list.innerHTML=arr.map(p=>`<div class="compound-item"><div class="compound-pill">${p.name}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${p.dose}mg · ${p.freq}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${p.inicio?'Desde '+fmtDate(p.inicio):''}${p.obs?' · '+p.obs:''}</div></div><button class="del" onclick="delItem('peptideos','${p.id}',renderPeptideos)">🗑</button></div>`).join('');}
+document.getElementById('col-data').value=today();
+function toggleCheck(el){el.classList.toggle('checked');}
+function saveColateral(){const data=document.getElementById('col-data').value;if(!data){showToast('⚠️ Informe a data');return;}const sintomas=[...document.querySelectorAll('.check-item.checked input')].map(i=>i.value);DB.set('colaterais',[...DB.get('colaterais'),{id:uid(),data,intensidade:document.getElementById('col-intensidade').value,sintomas,obs:document.getElementById('col-obs').value}]);document.querySelectorAll('.check-item').forEach(i=>i.classList.remove('checked'));document.getElementById('col-obs').value='';showToast('⚠️ Colaterais registrados!');renderColaterais();}
+function renderColaterais(){const arr=DB.get('colaterais');const list=document.getElementById('col-history');if(!arr.length){list.innerHTML='<div class="empty"><div class="emoji">⚠️</div><p>Nenhum colateral</p></div>';return;}list.innerHTML=[...arr].reverse().map(c=>`<div class="history-item"><div class="dot" style="background:var(--accent4)"></div><div class="info"><div class="main">${c.intensidade} · ${c.sintomas.length?c.sintomas.join(', '):'Sem sintomas'}</div><div class="sub">${fmtDate(c.data)}${c.obs?' · '+c.obs:''}</div></div><button class="del" onclick="delItem('colaterais','${c.id}',renderColaterais)">🗑</button></div>`).join('');}
+let treinoOn=false;
+function renderHabitos(){document.getElementById('hab-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});const w=DB.getObj('water-'+today());renderGlasses(w.count||0);const hab=DB.getObj('habitos-'+today());treinoOn=hab.treinou||false;document.getElementById('treino-toggle').classList.toggle('on',treinoOn);document.getElementById('treino-extra').style.display=treinoOn?'block':'none';if(hab.treinoTipo)document.getElementById('treino-tipo').value=hab.treinoTipo;if(hab.duracao)document.getElementById('treino-duracao').value=hab.duracao;if(hab.passos){document.getElementById('passos-valor').value=hab.passos;updatePassosBar(hab.passos);}const days=[];for(let i=0;i<30;i++){const d=new Date();d.setDate(d.getDate()-i);const k=d.toISOString().split('T')[0];const h=DB.getObj('habitos-'+k);const wt=DB.getObj('water-'+k);if(h.saved||wt.count)days.push({date:k,...h,water:wt.count||0});}const list=document.getElementById('hab-history');if(!days.length){list.innerHTML='<div class="empty"><div class="emoji">🌿</div><p>Nenhum hábito registrado</p></div>';return;}list.innerHTML=days.map(d=>`<div class="history-item"><div class="dot green"></div><div class="info"><div class="main">${fmtDate(d.date)}</div><div class="sub">💧${d.water}/8 · ${d.treinou?'🏋️ Treinou':'—'} · 👟${d.passos||'—'}</div></div></div>`).join('');}
+function renderGlasses(count){document.getElementById('water-glasses').innerHTML=Array.from({length:8},(_,i)=>`<div class="glass ${i<count?'filled':''}" onclick="toggleGlass(${i})"><div class="glass-fill"></div></div>`).join('');document.getElementById('water-count').textContent=count;document.getElementById('water-progress').style.width=(count/8*100)+'%';}
+function toggleGlass(idx){const w=DB.getObj('water-'+today());const c=w.count||0;DB.setObj('water-'+today(),{count:idx<c?idx:idx+1});renderGlasses(DB.getObj('water-'+today()).count);}
+function resetWater(){DB.setObj('water-'+today(),{count:0});renderGlasses(0);showToast('💧 Contador resetado');}
+function toggleTreino(){treinoOn=!treinoOn;document.getElementById('treino-toggle').classList.toggle('on',treinoOn);document.getElementById('treino-extra').style.display=treinoOn?'block':'none';}
+function savePassos(){const v=parseInt(document.getElementById('passos-valor').value)||0;const hab=DB.getObj('habitos-'+today());hab.passos=v;DB.setObj('habitos-'+today(),hab);updatePassosBar(v);showToast('👟 Passos salvos!');}
+function updatePassosBar(v){document.getElementById('passos-bar').style.width=Math.min(v/10000*100,100)+'%';}
+function saveHabitos(){const hab=DB.getObj('habitos-'+today());hab.treinou=treinoOn;hab.treinoTipo=document.getElementById('treino-tipo').value;hab.duracao=parseInt(document.getElementById('treino-duracao').value)||null;hab.passos=parseInt(document.getElementById('passos-valor').value)||null;hab.saved=true;DB.setObj('habitos-'+today(),hab);showToast('✅ Hábitos salvos!');renderHabitos();}
+document.getElementById('foto-data').value=today();
+function uploadFoto(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{const arr=[...DB.get('fotos'),{id:uid(),data:document.getElementById('foto-data').value,legenda:document.getElementById('foto-legenda').value,src:ev.target.result}];arr.sort((a,b)=>a.data.localeCompare(b.data));DB.set('fotos',arr);document.getElementById('foto-legenda').value='';e.target.value='';showToast('📷 Foto adicionada!');renderFotos();};reader.readAsDataURL(file);}
+function renderFotos(){const arr=DB.get('fotos');const cont=document.getElementById('foto-timeline');if(!arr.length){cont.innerHTML='<div class="empty"><div class="emoji">📷</div><p>Nenhuma foto</p></div>';return;}cont.innerHTML='<div class="photo-grid">'+[...arr].reverse().map(f=>`<div class="photo-item"><img src="${f.src}" alt="${f.legenda||'Foto'}" loading="lazy"><div class="photo-date">${f.legenda||fmtDate(f.data)}<br><span style="font-size:9px;opacity:0.7">${fmtDate(f.data)}</span></div><button class="del-photo" onclick="delFoto('${f.id}')">✕</button></div>`).join('')+'</div>';}
+function delFoto(id){DB.set('fotos',DB.get('fotos').filter(f=>f.id!==id));showToast('🗑 Foto removida');renderFotos();}
+function saveLembrete(){const titulo=document.getElementById('lem-titulo').value;const hora=document.getElementById('lem-hora').value;if(!titulo||!hora){showToast('⚠️ Preencha título e horário');return;}DB.set('lembretes',[...DB.get('lembretes'),{id:uid(),titulo,hora,dia:document.getElementById('lem-dia').value,tipo:document.getElementById('lem-tipo').value}]);document.getElementById('lem-titulo').value='';showToast('🔔 Lembrete criado!');renderLembretes();}
+function renderLembretes(){const arr=DB.get('lembretes');const list=document.getElementById('lem-list');if(!arr.length){list.innerHTML='<div class="empty"><div class="emoji">🔔</div><p>Nenhum lembrete</p></div>';return;}list.innerHTML=arr.map(l=>`<div class="reminder-item"><div class="reminder-time">${l.hora}</div><div class="reminder-info"><div class="main">${l.tipo} ${l.titulo}</div><div class="sub">${l.dia}</div></div><button class="del" onclick="delItem('lembretes','${l.id}',renderLembretes)">🗑</button></div>`).join('');}
+function checkReminders(){const arr=DB.get('lembretes');if(!arr.length)return;const hhmm=new Date().toTimeString().slice(0,5);const due=arr.filter(l=>l.hora===hhmm);if(due.length)showToast('🔔 '+due.map(d=>d.titulo).join(', '));}
+function delItem(key,id,fn){DB.set(key,DB.get(key).filter(i=>i.id!==id));showToast('🗑 Item removido');fn();}
+function exportData(){const blob=new Blob([JSON.stringify({aplicacoes:DB.get('aplicacoes'),pesos:DB.get('pesos'),medidas:DB.get('medidas'),peptideos:DB.get('peptideos'),colaterais:DB.get('colaterais'),lembretes:DB.get('lembretes'),exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='tracker-glp1-backup.json';a.click();URL.revokeObjectURL(url);showToast('📤 Dados exportados!');}
+function init(){document.getElementById('app-datetime').value=nowDT();renderDashboard();renderHabitos();setInterval(checkReminders,60000);}
+init();
+</script>
+</body>
+</html>
